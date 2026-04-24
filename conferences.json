@@ -1,0 +1,39 @@
+name: Weekly Conference Update
+
+on:
+  schedule:
+    # Every Monday at 8:00 AM UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+    # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  update-conferences:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to commit updated JSON back to repo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Run Claude update agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python agent/update_agent.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name  "Conference Bot"
+          git config user.email "bot@conference-tracker"
+          git add tracker/conferences.json tracker/last_update.json
+          git diff --cached --quiet || git commit -m "🤖 Auto-update conferences [$(date -u '+%Y-%m-%d')]"
+          git push
